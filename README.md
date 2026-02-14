@@ -114,7 +114,7 @@ git push
 
 🚀 How to Run
 
-git clone https://github.com/your-username/git-visual-simulator
+git clone https://vengababu-x.github.io/git-visual-simulator/
 cd git-visual-simulator
 open index.html
 
