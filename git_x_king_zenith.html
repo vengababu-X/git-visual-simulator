@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>GIT X KING: ZENITH EDITION</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Teko:wght@400;600;700&display=swap');
+
+        :root {
+            --bg: #020204;
+            --panel: #0a0a0f;
+            --accent: #00f3ff;
+            --gold: #ffb800;
+            --success: #00ff9d;
+            --danger: #ff0044;
+            --purple: #bc13fe;
+            --font-main: 'Teko', sans-serif;
+            --font-code: 'Share Tech Mono', monospace;
+        }
+
+        * { box-sizing: border-box; user-select: none; -webkit-tap-highlight-color: transparent; }
+
+        body {
+            margin: 0; background: var(--bg); color: #fff;
+            font-family: var(--font-main); height: 100vh;
+            display: flex; flex-direction: column; overflow: hidden;
+        }
+
+        /* --- UI COMPONENTS --- */
+        header {
+            height: 60px; background: #000; border-bottom: 2px solid var(--gold);
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 0 20px; z-index: 100; flex-shrink: 0;
+        }
+        .logo { font-size: 2.2rem; color: var(--gold); letter-spacing: 3px; font-weight: 700; text-shadow: 0 0 15px rgba(255,184,0,0.4); }
+        .lvl-tag { background: #111; padding: 2px 15px; border: 1px solid var(--accent); color: var(--accent); border-radius: 4px; font-size: 1.3rem; }
+
+        .tabs { display: flex; background: #0a0a0a; border-bottom: 1px solid #222; flex-shrink: 0; }
+        .tab-btn {
+            flex: 1; padding: 15px; background: transparent; color: #444;
+            border: none; border-bottom: 3px solid transparent;
+            font-family: var(--font-main); font-size: 1.4rem; cursor: pointer; transition: 0.3s;
+        }
+        .tab-btn.active { color: #fff; border-bottom-color: var(--gold); background: rgba(255, 184, 0, 0.05); }
+
+        #viewport { flex: 1; position: relative; overflow: hidden; }
+        .section {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            display: none; flex-direction: column; padding: 20px; overflow-y: auto;
+        }
+        .section.active { display: flex; animation: viewFade 0.3s ease-out; }
+        @keyframes viewFade { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* --- DOCUMENTATION & FLOW --- */
+        .doc-card { background: #000; border: 1px solid #333; padding: 20px; border-left: 5px solid var(--gold); margin-bottom: 20px; box-shadow: 0 5px 15px rgba(0,0,0,0.5); }
+        .doc-h { font-size: 2.4rem; color: var(--gold); margin: 0; line-height: 1; }
+        .doc-tag { font-family: var(--font-code); color: var(--success); font-size: 0.85rem; margin: 10px 0; display: block; }
+        .doc-p { font-family: var(--font-code); color: #bbb; font-size: 0.95rem; line-height: 1.5; margin: 10px 0; }
+        
+        .flow-container {
+            background: #08080a; padding: 20px; border: 1px dashed #444; border-radius: 8px;
+            display: flex; flex-direction: column; align-items: center; margin: 15px 0;
+        }
+        .flow-box { 
+            background: #111; border: 1px solid var(--accent); padding: 8px 15px; 
+            border-radius: 4px; font-family: var(--font-code); font-size: 0.85rem; color: var(--accent);
+            text-align: center; width: 180px; box-shadow: 0 0 10px rgba(0,243,255,0.1);
+        }
+        .flow-link { width: 2px; height: 25px; background: var(--accent); }
+        .flow-cmd { font-family: var(--font-code); font-size: 0.8rem; color: var(--gold); font-weight: bold; }
+
+        .cmd-panel {
+            background: #0a0a0f; border: 1px solid var(--accent); padding: 15px;
+            display: flex; justify-content: space-between; align-items: center; gap: 15px;
+        }
+        .cmd-text { font-family: var(--font-code); color: var(--success); font-size: 1.2rem; }
+        .btn-inject { background: var(--accent); border: none; padding: 8px 20px; font-weight: bold; cursor: pointer; font-family: var(--font-main); font-size: 1.2rem; border-radius: 4px; }
+
+        /* --- VISUALIZER ENGINE --- */
+        #view-visualizer { justify-content: center; align-items: center; background: #050505; }
+        .engine-stage {
+            position: relative; width: 100%; max-width: 900px; height: 280px;
+            display: flex; justify-content: space-between; align-items: center; padding: 0 40px;
+        }
+        .svg-paths { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; pointer-events: none; }
+        .path-line { fill: none; stroke: #1a1a1a; stroke-width: 3; stroke-dasharray: 6; }
+        .path-line.active { stroke: var(--accent); animation: dash 1s linear infinite; filter: drop-shadow(0 0 8px var(--accent)); }
+        @keyframes dash { to { stroke-dashoffset: -12; } }
+
+        .zone {
+            width: 80px; height: 100px; background: #0a0a0f; border: 2px dashed #333; border-radius: 8px;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            position: relative; z-index: 10; transition: 0.4s;
+        }
+        .zone-icon { font-size: 2.2rem; opacity: 0.15; transition: 0.4s; }
+        .zone-label { font-size: 0.9rem; color: #444; margin-top: 10px; font-weight: bold; text-transform: uppercase; }
+        .zone.lit { border-color: var(--accent); background: rgba(0, 243, 255, 0.1); border-style: solid; box-shadow: 0 0 25px rgba(0,243,255,0.15); }
+        .zone.lit .zone-icon { opacity: 1; filter: drop-shadow(0 0 10px var(--accent)); }
+        .zone.lit .zone-label { color: #fff; }
+
+        #file-token {
+            position: absolute; width: 36px; height: 48px; background: #fff; border-radius: 3px;
+            display: flex; align-items: center; justify-content: center; z-index: 100;
+            font-family: var(--font-code); font-weight: bold; color: #000; font-size: 9px;
+            box-shadow: 0 0 15px #fff; opacity: 0; top: 50%; left: 0; margin-top: -24px;
+            transition: transform 1s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.3s, background 0.3s;
+        }
+        #file-token::after { content: 'CODE'; }
+        .t-staged { background: var(--gold) !important; box-shadow: 0 0 20px var(--gold) !important; }
+        .t-repo { background: var(--accent) !important; border-radius: 50% !important; height: 36px !important; box-shadow: 0 0 20px var(--accent) !important; }
+
+        /* --- BATTLE ARENA --- */
+        #view-battle { background: radial-gradient(circle at bottom, #120a24 0%, #000 100%); justify-content: flex-end; padding-bottom: 40px; }
+        .arena { display: flex; justify-content: space-around; align-items: flex-end; width: 100%; max-width: 850px; margin: 0 auto; }
+        .unit { text-align: center; width: 140px; position: relative; }
+        .unit img { width: 100%; filter: drop-shadow(0 0 20px rgba(0,0,0,0.8)); transition: 0.3s; }
+        .hp-bar { width: 100%; height: 10px; background: #1a1a1a; border-radius: 5px; margin-top: 15px; overflow: hidden; border: 1px solid #333; }
+        .hp-fill { height: 100%; width: 100%; transition: width 0.4s; }
+        #h-hp { background: linear-gradient(90deg, var(--accent), #0066ff); }
+        #e-hp { background: linear-gradient(90deg, var(--danger), #660000); }
+
+        .atk-hero { animation: lungeR 0.4s forwards; }
+        @keyframes lungeR { 50% { transform: translateX(100px); } }
+        .atk-enemy { animation: lungeL 0.4s forwards; }
+        @keyframes lungeL { 50% { transform: translateX(-100px); } }
+        .hit-fx { animation: shake 0.4s forwards; filter: brightness(4) hue-rotate(90deg); }
+        @keyframes shake { 0%,100%{transform:translateX(0);} 20%{transform:translateX(-12px);} 40%{transform:translateX(12px);} }
+
+        /* --- TERMINAL --- */
+        #terminal { height: 180px; background: #000; border-top: 2px solid #333; padding: 15px; display: flex; flex-direction: column; flex-shrink: 0; z-index: 110; }
+        #log { flex: 1; overflow-y: auto; font-family: var(--font-code); font-size: 0.9rem; color: #666; }
+        .l-sys { color: var(--accent); } .l-err { color: var(--danger); } .l-win { color: var(--success); }
+        .input-row { display: flex; align-items: center; background: #0a0a0a; border: 1px solid #333; border-radius: 4px; padding: 10px; margin-top: 8px; }
+        .prompt { color: var(--gold); font-family: var(--font-code); font-weight: bold; margin-right: 12px; }
+        input { background: transparent; border: none; color: #fff; font-family: var(--font-code); font-size: 1.1rem; flex: 1; outline: none; }
+
+        /* --- POPUPS & REWARDS --- */
+        #popup {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.97); z-index: 300; display: flex; justify-content: center; align-items: center;
+            opacity: 0; pointer-events: none; transition: 0.4s;
+        }
+        #popup.active { opacity: 1; pointer-events: auto; }
+        .pop-card {
+            background: #0a0a0f; border: 2px solid var(--gold); width: 90%; max-width: 550px;
+            padding: 40px; box-shadow: 0 0 100px rgba(255, 184, 0, 0.2); text-align: left;
+        }
+        .pop-h { font-size: 2.8rem; color: var(--gold); margin-bottom: 10px; border-bottom: 2px solid #222; padding-bottom: 10px; }
+        .pop-p { font-family: var(--font-code); color: #ddd; line-height: 1.6; margin-bottom: 30px; font-size: 1.05rem; }
+        .pop-stat { color: var(--accent); font-weight: bold; text-transform: uppercase; margin-right: 10px; }
+
+        .btn-pop { background: var(--gold); color: #000; border: none; padding: 18px; font-family: var(--font-main); font-size: 1.6rem; font-weight: bold; width: 100%; cursor: pointer; transition: 0.2s; }
+        .btn-pop:hover { background: #fff; box-shadow: 0 0 20px #fff; }
+
+        /* Hall of Fame Reward */
+        .reward-crown { font-size: 5rem; text-align: center; display: block; margin-bottom: 20px; animation: float 2s infinite ease-in-out; }
+        @keyframes float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-20px); } }
+
+        @media (max-width: 600px) {
+            .zone { width: 50px; height: 80px; }
+            .zone-icon { font-size: 1.4rem; }
+            .zone-label { font-size: 0.6rem; }
+            .flow-box { width: 140px; font-size: 0.75rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- OVERLAYS -->
+    <div id="popup" class="active">
+        <div class="pop-card" id="pop-content">
+            <div class="pop-h" id="p-title">ARCHITECT BOOT</div>
+            <div class="pop-p" id="p-text">
+                > System check: ZENITH GRADE<br>
+                > Loading Industrial Curriculum (13 Missions)...<br><br>
+                Master the flow of data. Commands are case-insensitive. Typing errors will trigger monster attacks.<br>
+                <strong>PRO TIP:</strong> Check the Manual for flowcharts.
+            </div>
+            <button class="btn-pop" id="p-btn" onclick="handlePopupClick()">START SIMULATION</button>
+        </div>
+    </div>
+
+    <header>
+        <div class="logo">GIT X KING</div>
+        <div class="lvl-tag">MISSION: <span id="lvl-num">1</span></div>
+    </header>
+
+    <nav class="tabs">
+        <button class="tab-btn active" onclick="switchView('guide')">MANUAL</button>
+        <button class="tab-btn" onclick="switchView('visualizer')">VISUALIZER</button>
+        <button class="tab-btn" onclick="switchView('battle')">BATTLE</button>
+    </nav>
+
+    <div id="viewport">
+        <!-- MANUAL -->
+        <div id="view-guide" class="section active">
+            <div class="doc-card">
+                <div class="doc-h" id="g-title">...</div>
+                <span class="doc-tag" id="g-info">INDUSTRIAL SPEC // MODULE.001</span>
+                <div class="doc-p" id="g-desc">...</div>
+                
+                <div style="font-size:0.9rem; color:#444; margin-bottom:10px; font-weight:bold; letter-spacing:2px;">DATA FLOW LOGIC</div>
+                <div class="flow-container" id="g-flow"></div>
+
+                <div class="cmd-panel">
+                    <span class="hint-code" id="g-cmd">...</span>
+                    <button class="btn-inject" onclick="injectCmd()">[INSERT]</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- VISUALIZER -->
+        <div id="view-visualizer" class="section">
+            <div class="engine-stage">
+                <svg class="svg-paths">
+                    <line x1="12%" y1="50%" x2="38%" y2="50%" class="path-line" id="line-1" />
+                    <line x1="38%" y1="50%" x2="62%" y2="50%" class="path-line" id="line-2" />
+                    <line x1="62%" y1="50%" x2="88%" y2="50%" class="path-line" id="line-3" />
+                </svg>
+                <div class="zone" id="z-work"><div class="zone-icon">📋</div><div class="zone-label">WORK</div></div>
+                <div class="zone" id="z-stage"><div class="zone-icon">📦</div><div class="zone-label">STAGE</div></div>
+                <div class="zone" id="z-repo"><div class="zone-icon">💾</div><div class="zone-label">REPO</div></div>
+                <div class="zone" id="z-remote"><div class="zone-icon">☁️</div><div class="zone-label">REMOTE</div></div>
+                <div id="file-token"></div>
+            </div>
+            <div id="engine-status" style="color:var(--gold); font-family:var(--font-code); font-size:1rem; margin-top:30px;">STATUS: STANDBY</div>
+        </div>
+
+        <!-- BATTLE -->
+        <div id="view-battle" class="section">
+            <div class="arena">
+                <div class="unit" id="hero-box">
+                    <img src="https://api.dicebear.com/9.x/adventurer/svg?seed=Felix&backgroundColor=transparent">
+                    <div class="hp-bar"><div class="hp-fill" id="h-hp"></div></div>
+                </div>
+                <div class="unit" id="enemy-box">
+                    <img id="enemy-img" src="">
+                    <div class="hp-bar"><div class="hp-fill" id="e-hp"></div></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="terminal">
+        <div id="log"><div class="l-sys">> Terminal Online. Awaiting Injection.</div></div>
+        <div class="input-row">
+            <span class="prompt">KING@ZENITH:~$</span>
+            <input type="text" id="input" autocomplete="off" spellcheck="false" placeholder="Enter command...">
+        </div>
+    </div>
+
+    <script>
+        const LEVELS = [
+            { id: 1, name: "INIT REPO", info: "CORE.01", desc: "Before you build, you must track. Initialize the local database to create the hidden .git directory.", cmd: "git init", flow: ["Local Folder", "git init", ".git Database"], anim: "init", enemy: "A1", report: "SUCCESS. Local sector initialized for versioning." },
+            { id: 2, name: "STATUS CHECK", info: "CORE.02", desc: "The status command is your dashboard. It identifies new files or uncommitted changes.", cmd: "git status", flow: ["Working Tree", "git status", "Diagnostic"], anim: "status", enemy: "A2", report: "SUCCESS. Changes detected and mapped." },
+            { id: 3, name: "STAGING AREA", info: "CORE.03", desc: "Move your changes to the 'Loading Dock'. This prepares files for the next snapshot.", cmd: "git add .", flow: ["Working Dir", "git add", "Staging Area"], anim: "move_ws", start: "z-work", enemy: "A3", report: "SUCCESS. Index updated. Files staged for shipping." },
+            { id: 4, name: "COMMIT SAVE", info: "CORE.04", desc: "Take a permanent snapshot of staged changes. This adds a unique entry to the history timeline.", cmd: "git commit -m", flow: ["Staging", "git commit", "Repo History"], anim: "move_sr", start: "z-stage", enemy: "A4", report: "SUCCESS. Snapshot written to permanent history." },
+            { id: 5, name: "HISTORY LOG", info: "HIST.01", desc: "Read the scrolls of time. View the history of all commits made in this project.", cmd: "git log", flow: ["Database", "git log", "History List"], anim: "flash", start: "z-repo", enemy: "A5", report: "SUCCESS. History log successfully retrieved." },
+            { id: 6, name: "BRANCHING", info: "BR.01", desc: "Create a parallel timeline called 'feature'. This allows safe work away from the main code.", cmd: "git branch feature", flow: ["Current Commit", "git branch", "Parallel Pointer"], anim: "flash", start: "z-repo", enemy: "A6", report: "SUCCESS. Timeline diverged. Parallel ref created." },
+            { id: 7, name: "CHECKOUT", info: "BR.02", desc: "Switch your focus (HEAD) from the main timeline to the feature branch.", cmd: "git checkout feature", flow: ["Main Branch", "git checkout", "Feature Branch"], anim: "flash", start: "z-repo", enemy: "A7", report: "SUCCESS. Focus shifted to feature timeline." },
+            { id: 8, name: "STASHING", info: "ADV.01", desc: "Need to clear your desk fast? Stash dirty changes in a hidden drawer for later.", cmd: "git stash", flow: ["Dirty Work", "git stash", "Hidden Stack"], anim: "stash", start: "z-work", enemy: "A8", report: "SUCCESS. Working tree cleaned. Data stashed." },
+            { id: 9, name: "STASH POP", info: "ADV.02", desc: "Retrieve your hidden changes from the drawer and put them back into action.", cmd: "git stash pop", flow: ["Hidden Stack", "git stash pop", "Working Dir"], anim: "pop", start: "z-work", enemy: "A9", report: "SUCCESS. Stashed changes restored to sector." },
+            { id: 10, name: "RESET WORK", info: "ADV.03", desc: "Made a mistake? Reset your timeline to the previous commit (Hard mode).", cmd: "git reset head~1", flow: ["Bad Commit", "git reset", "Previous State"], anim: "reset", start: "z-repo", enemy: "A10", report: "SUCCESS. Timeline rewound. Mistake erased." },
+            { id: 11, name: "MERGING", info: "ADV.04", desc: "Combine your completed feature branch back into the main history timeline.", cmd: "git merge feature", flow: ["Timeline A+B", "git merge", "Unified King"], anim: "flash", start: "z-repo", enemy: "A11", report: "SUCCESS. Timelines merged. Sector unified." },
+            { id: 12, name: "REMOTE LINK", info: "CLOUD.01", desc: "Connect your local kingdom to a cloud server like GitHub. Name the link 'origin'.", cmd: "git remote add", flow: ["Local Repo", "remote add", "Cloud Origin"], anim: "link", start: "z-repo", enemy: "A12", report: "SUCCESS. Network uplink established." },
+            { id: 13, name: "PUSH UPLINK", info: "CLOUD.02", desc: "The final step. Upload your local snapshots to the cloud for collaboration.", cmd: "git push", flow: ["Local History", "git push", "Cloud Cluster"], anim: "move_rr", start: "z-repo", enemy: "A13", report: "SUCCESS. ZENITH ASCENSION COMPLETE." }
+        ];
+
+        let state = { level: 0, locked: false, hHp: 100 };
+        const dom = {
+            pTitle: document.getElementById('p-title'), pText: document.getElementById('p-text'), pBtn: document.getElementById('p-btn'),
+            gTitle: document.getElementById('g-title'), gDesc: document.getElementById('g-desc'), gFlow: document.getElementById('g-flow'),
+            gCmd: document.getElementById('g-cmd'), token: document.getElementById('file-token'), input: document.getElementById('input'),
+            log: document.getElementById('log'), eImg: document.getElementById('enemy-img'), eHp: document.getElementById('e-hp'), hHp: document.getElementById('h-hp'),
+            zones: { work: document.getElementById('z-work'), stage: document.getElementById('z-stage'), repo: document.getElementById('z-repo'), remote: document.getElementById('z-remote') },
+            lines: { 1: document.getElementById('line-1'), 2: document.getElementById('line-2'), 3: document.getElementById('line-3') }
+        };
+
+        const audio = new (window.AudioContext || window.webkitAudioContext)();
+
+        function switchView(v) {
+            document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+            document.getElementById('view-' + v).classList.add('active');
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            if(event) event.currentTarget.classList.add('active');
+        }
+
+        function handlePopupClick() {
+            document.getElementById('popup').classList.remove('active');
+            if (state.level < LEVELS.length - 1 && dom.pTitle.innerText.includes("DEBRIEF")) {
+                loadLevel(state.level + 1);
+            } else if (state.level === 0) {
+                loadLevel(0);
+            } else { location.reload(); }
+        }
+
+        function loadLevel(idx) {
+            state.level = idx; state.locked = false; state.hHp = 100;
+            const lvl = LEVELS[idx];
+            document.getElementById('lvl-num').innerText = idx + 1;
+            document.getElementById('g-info').innerText = `INDUSTRIAL SPEC // ${lvl.info}`;
+            dom.gTitle.innerText = lvl.name; dom.gDesc.innerText = lvl.desc; dom.gCmd.innerText = lvl.cmd;
+            
+            dom.gFlow.innerHTML = "";
+            lvl.flow.forEach((t, i) => {
+                const node = document.createElement('div'); node.className = 'flow-box'; node.innerText = t; dom.gFlow.appendChild(node);
+                if (i < lvl.flow.length - 1) {
+                    const l = document.createElement('div'); l.className = 'flow-link'; dom.gFlow.appendChild(l);
+                    const tag = document.createElement('div'); tag.className = 'flow-cmd'; tag.innerText = lvl.cmd.split(' ')[1] || lvl.cmd; dom.gFlow.appendChild(tag);
+                    const l2 = document.createElement('div'); l2.className = 'flow-link'; dom.gFlow.appendChild(l2);
+                }
+            });
+
+            dom.eImg.src = `https://api.dicebear.com/9.x/bottts/svg?seed=Arch${idx}&backgroundColor=transparent`;
+            dom.eHp.style.width = "100%"; dom.hHp.style.width = "100%";
+            resetVisuals();
+            if (lvl.start) {
+                const z = dom.zones[lvl.start.replace('z-', '')];
+                dom.token.style.transition = 'none'; dom.token.style.opacity = 1; moveTokenTo(z);
+                if (lvl.start === 'z-work') dom.token.style.background = "#fff";
+                if (lvl.start === 'z-stage') dom.token.classList.add('t-staged');
+                if (lvl.start === 'z-repo') dom.token.classList.add('t-repo');
+            } else { dom.token.style.opacity = 0; }
+            log(`MISSION ${idx+1} LOADED.`, 'l-sys'); dom.input.focus();
+        }
+
+        function injectCmd() { dom.input.value = dom.gCmd.innerText; dom.input.focus(); }
+
+        function log(m, c) {
+            const d = document.createElement('div'); d.className = `line ${c}`; d.innerText = m;
+            dom.log.appendChild(d); dom.log.scrollTop = dom.log.scrollHeight;
+        }
+
+        dom.input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !state.locked) {
+                const val = dom.input.value.trim().toLowerCase(); dom.input.value = '';
+                if(!val) return;
+                const lvl = LEVELS[state.level];
+                // Smart check: Case insensitive and handles dynamic msg
+                let ok = (lvl.id === 4 && val.startsWith('git commit')) || 
+                         (lvl.id === 10 && val.startsWith('git reset')) || 
+                         (lvl.id === 12 && val.startsWith('git remote')) || 
+                         (val === lvl.cmd.toLowerCase());
+                
+                if (ok) executeAction(lvl);
+                else monsterAttack();
+            }
+        });
+
+        async function monsterAttack() {
+            state.locked = true; log("ERROR: MONSTER COUNTER-ATTACK!", "l-err");
+            document.querySelectorAll('.tab-btn')[2].click();
+            await new Promise(r => setTimeout(r, 200));
+            document.getElementById('enemy-box').classList.add('atk-enemy'); sfx('error');
+            await new Promise(r => setTimeout(r, 200));
+            document.getElementById('hero-box').classList.add('hit-fx');
+            state.hHp -= 25; dom.hHp.style.width = state.hHp + "%";
+            await new Promise(r => setTimeout(r, 600));
+            document.getElementById('enemy-box').classList.remove('atk-enemy');
+            document.getElementById('hero-box').classList.remove('hit-fx');
+            if(state.hHp <= 0) { log("DEFEAT. SECTOR REBOOTING...", "l-err"); setTimeout(() => loadLevel(state.level), 800); }
+            else { state.locked = false; }
+        }
+
+        async function executeAction(lvl) {
+            state.locked = true; log(`CMD: ${lvl.cmd} ACCEPTED.`, 'l-win');
+            document.querySelectorAll('.tab-btn')[1].click();
+            document.getElementById('engine-status').innerText = "STATUS: UPLOADING DATA...";
+            dom.token.style.transition = 'transform 1s cubic-bezier(0.25, 1, 0.5, 1)'; sfx('process');
+
+            if(lvl.anim === 'init') dom.zones.repo.classList.add('lit');
+            else if(lvl.anim === 'status') { dom.zones.work.classList.add('lit'); dom.token.style.opacity=1; moveTokenTo(dom.zones.work); }
+            else if(lvl.anim === 'move_ws') { dom.lines[1].classList.add('active'); moveTokenTo(dom.zones.stage); dom.zones.stage.classList.add('lit'); dom.token.classList.add('t-staged'); }
+            else if(lvl.anim === 'move_sr') { dom.lines[2].classList.add('active'); moveTokenTo(dom.zones.repo); dom.zones.repo.classList.add('lit'); dom.token.classList.add('t-repo'); }
+            else if(lvl.anim === 'link') { dom.zones.repo.classList.add('lit'); dom.zones.remote.classList.add('lit'); }
+            else if(lvl.anim === 'move_rr') { dom.lines[3].classList.add('active'); moveTokenTo(dom.zones.remote); dom.zones.remote.classList.add('lit'); }
+            else if(lvl.anim === 'stash') { dom.token.style.transform += " translateY(140px)"; dom.token.style.opacity = 0; }
+            else if(lvl.anim === 'pop') { dom.token.style.opacity = 1; moveTokenTo(dom.zones.work); dom.zones.work.classList.add('lit'); }
+            else if(lvl.anim === 'reset') { dom.token.classList.remove('t-repo'); moveTokenTo(dom.zones.work); dom.zones.work.classList.add('lit'); }
+            else { dom.zones.repo.classList.add('lit'); }
+
+            await new Promise(r => setTimeout(r, 1500));
+            document.querySelectorAll('.tab-btn')[2].click();
+            document.getElementById('hero-box').classList.add('atk-hero'); sfx('attack');
+            await new Promise(r => setTimeout(r, 300));
+            document.getElementById('enemy-box').classList.add('hit-fx'); sfx('hit');
+            dom.eHp.style.width = "0%";
+            await new Promise(r => setTimeout(r, 800));
+            document.getElementById('hero-box').classList.remove('atk-hero'); sfx('win');
+
+            if(state.level === LEVELS.length - 1) { showReward(); }
+            else {
+                dom.pTitle.innerText = "MISSION DEBRIEF";
+                dom.pText.innerHTML = `<span class="pop-stat">COMMAND:</span> ${lvl.cmd}<br><span class="pop-stat">RESULT:</span> ${lvl.report}<br><br>> ACCESSING NEXT SECTOR...`;
+                dom.pBtn.innerText = "CONTINUE";
+                document.getElementById('popup').classList.add('active');
+            }
+        }
+
+        function showReward() {
+            const card = document.getElementById('pop-content');
+            card.innerHTML = `
+                <span class="reward-crown">👑</span>
+                <div class="pop-h">ZENITH ARCHITECT</div>
+                <div class="pop-p">
+                    > OMEGA SEQUENCE COMPLETE<br>
+                    > ALL 13 LEVELS MASTERED<br><br>
+                    Congratulations, King. You have mastered the industrial standard of Git. Your kingdom of code is now unshakeable.
+                </div>
+                <button class="btn-pop" onclick="location.reload()">RESTART KINGDOM</button>
+            `;
+            document.getElementById('popup').classList.add('active');
+        }
+
+        function moveTokenTo(zone) {
+            const p = document.querySelector('.engine-stage').getBoundingClientRect();
+            const z = zone.getBoundingClientRect();
+            dom.token.style.transform = `translateX(${(z.left - p.left) + (z.width/2) - 17}px)`;
+        }
+
+        function resetVisuals() {
+            Object.values(dom.zones).forEach(z => z.classList.remove('lit'));
+            Object.values(dom.lines).forEach(l => l.classList.remove('active'));
+            dom.token.className = ""; document.getElementById('engine-status').innerText = "STATUS: READY";
+        }
+
+        function sfx(type) {
+            if(audio.state === 'suspended') audio.resume();
+            const o = audio.createOscillator(); const g = audio.createGain();
+            o.connect(g); g.connect(audio.destination);
+            const n = audio.currentTime;
+            if(type==='process'){ o.type='sine'; o.frequency.value=400; g.gain.value=0.05; o.frequency.linearRampToValueAtTime(800,n+0.5); o.start(); o.stop(n+0.5); }
+            if(type==='attack'){ o.type='sawtooth'; o.frequency.value=150; g.gain.value=0.1; o.start(); o.stop(n+0.2); }
+            if(type==='hit'){ o.type='sawtooth'; o.frequency.value=100; g.gain.value=0.2; o.start(); o.stop(n+0.3); }
+            if(type==='win'){ o.type='triangle'; [440,554,659].forEach((f,i)=>{ setTimeout(()=>{const o2=audio.createOscillator();const g2=audio.createGain();o2.connect(g2);g2.connect(audio.destination);o2.frequency.value=f;g2.gain.linearRampToValueAtTime(0,audio.currentTime+0.2);o2.start();o2.stop(audio.currentTime+0.2);},i*100);}); }
+            if(type==='error'){ o.type='sawtooth'; o.frequency.value=80; g.gain.value=0.1; o.start(); o.stop(n+0.2); }
+        }
+    </script>
+</body>
+</html>
+
